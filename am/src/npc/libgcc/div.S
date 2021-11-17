@@ -14,8 +14,6 @@ X:
 	X = Y
 
 
-#define __riscv_xlen 64
-
   .text
   .align 2
 

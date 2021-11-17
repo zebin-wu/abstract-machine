@@ -4,23 +4,23 @@ CFLAGS        += $(COMMON_FLAGS) -static
 ASFLAGS       += $(COMMON_FLAGS) -O0
 LDFLAGS       += -melf64lriscv
 
-AM_SRCS := mycpu/start.S \
-           mycpu/trm.c \
-           mycpu/libgcc/muldi3.S \
-           mycpu/libgcc/div.S \
-           mycpu/ioe.c \
-           mycpu/timer.c \
-           mycpu/input.c \
-           mycpu/cte.c \
-           mycpu/trap.S \
-           mycpu/vme.c \
-           mycpu/mpe.c
+AM_SRCS := npc/start.S \
+           npc/trm.c \
+           npc/libgcc/muldi3.S \
+           npc/libgcc/div.S \
+           npc/ioe.c \
+           npc/timer.c \
+           npc/input.c \
+           npc/cte.c \
+           npc/trap.S \
+           npc/vme.c \
+           npc/mpe.c
 
 CFLAGS    += -fdata-sections -ffunction-sections
 LDFLAGS   += -T $(AM_HOME)/scripts/platform/nemu.ld --defsym=_pmem_start=0x80000000 --defsym=_entry_offset=0x0
 LDFLAGS   += --gc-sections -e _start
 CFLAGS += -DMAINARGS=\"$(mainargs)\"
-.PHONY: $(AM_HOME)/am/src/mycpu/trm.c
+.PHONY: $(AM_HOME)/am/src/npc/trm.c
 
 image: $(IMAGE).elf
 	@$(OBJDUMP) -d $(IMAGE).elf > $(IMAGE).txt
