@@ -12,11 +12,11 @@ static int printuint(uint64_t n, int base) {
   int top = 0;
   int len = 0;
 
-  while (n) {
+  do {
     stack[top++] = digits[n % base];
     len++;
     n /= base;
-  }
+  } while (n);
   while (top) {
     putch(stack[--top]);
   }
@@ -71,6 +71,9 @@ int printf(const char *fmt, ...) {
           break;
         case 'd':
           len += printint(va_arg(ap, int));
+          break;
+        case 'u':
+          len += printuint(va_arg(ap, unsigned), 10);
           break;
         case 's':
           len += printstr(va_arg(ap, const char *));
