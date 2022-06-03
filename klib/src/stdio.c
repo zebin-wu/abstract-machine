@@ -5,9 +5,16 @@
 
 #if !defined(__ISA_NATIVE__) || defined(__NATIVE_USE_KLIB__)
 
-const char digits[] = "0123456789abcdef";
+struct vsnprint_handle_cb_arg {
+  size_t n;
+  char *p;
+};
 
-static int printuint(uint64_t n, int base) {
+static const char digits[] = "0123456789abcdef";
+static int locked;
+
+static inline int
+handle_uint(uint64_t n, int base, int (*cb)(char ch, void *arg), void *arg) {
   char stack[16];
   int top = 0;
   int len = 0;
@@ -18,108 +25,171 @@ static int printuint(uint64_t n, int base) {
     n /= base;
   } while (n);
   while (top) {
-    putch(stack[--top]);
+    if (cb(stack[--top], arg)) {
+      return -1;
+    }
   }
   return len;
 }
 
-static int printint(int n) {
+static inline int
+handle_int(int n, int (*cb)(char ch, void *arg), void *arg) {
   int len = 0;
   if (n < 0) {
-    putch('-');
+    if (cb('-', arg)) {
+      return -1;
+    }
     len++;
     n = -n;
   }
-  len += printuint(n, 10);
+  len += handle_uint(n, 10, cb, arg);
   return len;
 }
 
-static int printstr(const char *s) {
+static inline int
+handle_str(const char *s, int (*cb)(char ch, void *arg), void *arg) {
   int len = 0;
   for (; *s; s++) {
-    putch(*s);
+    if (cb(*s, arg)) {
+      return -1;
+    }
     len++;
   }
   return len;
 }
 
-static int printptr(uintptr_t ptr) {
+static inline int
+handle_ptr(uintptr_t ptr, int (*cb)(char ch, void *arg), void *arg) {
   int len = 0;
   if (ptr == 0) {
-    return printstr("(null)");
+    return handle_str("(null)", cb, arg);
   }
-  len += printstr("0x");
+  len += handle_str("0x", cb, arg);
   for (int i = 0; i < sizeof(uintptr_t) * 2; i++, ptr <<= 4) {
-    putch(digits[ptr >> (sizeof(uintptr_t) * 8 - 4)]);
+    if (cb(digits[ptr >> (sizeof(uintptr_t) * 8 - 4)], arg)) {
+      return -1;
+    }
+    len++;
   }
   return len;
 }
 
-int printf(const char *fmt, ...) {
+static int
+handle_format(const char *fmt, va_list ap, int (*cb)(char ch, void *arg), void *arg) {
   int len = 0;
+  int ret;
   bool isfmt = false;
-  va_list ap;
 
-  va_start(ap, fmt);
   for (; *fmt; fmt++) {
     char c = *fmt;
     if (isfmt) {
       switch (c) {
         case '%':
-          putch('%');
-          len++;
+          ret = cb('%', arg) == -1 ? -1 : 1;
           break;
         case 'd':
-          len += printint(va_arg(ap, int));
+          ret = handle_int(va_arg(ap, int), cb, arg);
           break;
         case 'u':
-          len += printuint(va_arg(ap, unsigned), 10);
+          ret = handle_uint(va_arg(ap, unsigned), 10, cb, arg);
           break;
         case 's':
-          len += printstr(va_arg(ap, const char *));
+          ret = handle_str(va_arg(ap, const char *), cb, arg);
           break;
         case 'c':
-          putch(va_arg(ap, int));
-          len++;
+          ret = cb(va_arg(ap, int), arg) == -1 ? -1 : 1;
           break;
         case 'x':
-          len += printuint(va_arg(ap, unsigned int), 16);
+          ret = handle_uint(va_arg(ap, unsigned int), 16, cb, arg);
           break;
         case 'p':
-          len += printptr(va_arg(ap, uintptr_t));
+          ret = handle_ptr(va_arg(ap, uintptr_t), cb, arg);
           break;
         default:
-          putch('%');
-          putch(c);
-          len += 2;
+          ret = cb('%', arg) == -1 ? -1 : 1;
           break;
       }
+      if (ret == -1) {
+        return len;
+      }
+      len += ret;
       isfmt = false;
     } else if (c == '%') {
       isfmt = true;
     } else {
-      putch(c);
+      if (cb(c, arg)) {
+        return len;
+      }
       len++;
     }
   }
+
+  return len;
+}
+
+static int print_handle_cb(char ch, void *arg) {
+  putch(ch);
+  return 0;
+}
+
+int printf(const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  while (atomic_xchg(&locked, 1));
+  int len = handle_format(fmt, ap, print_handle_cb, NULL);
+  atomic_xchg(&locked, 0);
   va_end(ap);
   return len;
 }
 
+static int vsprint_handle_cb(char ch, void *arg) {
+  char **pout = arg;
+  char *p = *pout;
+  *p = ch;
+  *pout = p + 1;
+  return 0;
+}
+
 int vsprintf(char *out, const char *fmt, va_list ap) {
-  panic("Not implemented");
+  int len = handle_format(fmt, ap, vsprint_handle_cb, &out);
+  *out = '\0';
+  return len;
 }
 
 int sprintf(char *out, const char *fmt, ...) {
-  panic("Not implemented");
+  va_list ap;
+  va_start(ap, fmt);
+  int len = vsprintf(out, fmt, ap);
+  va_end(ap);
+  return len;
+}
+
+static int vsnprint_handle_cb(char ch, void *_arg) {
+  struct vsnprint_handle_cb_arg *arg = _arg;
+  if (arg->n == 1) {
+    return -1;
+  }
+  *((arg->p)++) = ch;
+  (arg->n)--;
+  return 0;
 }
 
 int snprintf(char *out, size_t n, const char *fmt, ...) {
-  panic("Not implemented");
+  va_list ap;
+  va_start(ap, fmt);
+  int len = vsnprintf(out, n, fmt, ap);
+  va_end(ap);
+  return len;
 }
 
 int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
-  panic("Not implemented");
+  struct vsnprint_handle_cb_arg arg = {
+    .p = out,
+    .n = n,
+  };
+  int len = handle_format(fmt, ap, vsnprint_handle_cb, &arg);
+  *(arg.p) = '\0';
+  return len;
 }
 
 #endif
