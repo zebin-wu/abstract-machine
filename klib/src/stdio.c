@@ -127,17 +127,22 @@ handle_format(const char *fmt, va_list ap, int (*cb)(char ch, void *arg), void *
   return len;
 }
 
-static int print_handle_cb(char ch, void *arg) {
+static int vprint_handle_cb(char ch, void *arg) {
   putch(ch);
   return 0;
+}
+
+int vprintf(const char *fmt, va_list ap) {
+  while (atomic_xchg(&locked, 1));
+  int len = handle_format(fmt, ap, vprint_handle_cb, NULL);
+  atomic_xchg(&locked, 0);
+  return len;
 }
 
 int printf(const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
-  while (atomic_xchg(&locked, 1));
-  int len = handle_format(fmt, ap, print_handle_cb, NULL);
-  atomic_xchg(&locked, 0);
+  int len = vprintf(fmt, ap);
   va_end(ap);
   return len;
 }
