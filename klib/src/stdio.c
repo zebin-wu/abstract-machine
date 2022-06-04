@@ -14,20 +14,26 @@ static const char digits[] = "0123456789abcdef";
 static int locked;
 
 static inline int
-handle_uint(uint64_t n, int base, int (*cb)(char ch, void *arg), void *arg) {
+handle_uint(uint64_t n, int base, char padding, int width, int (*cb)(char ch, void *arg), void *arg) {
   char stack[16];
   int top = 0;
   int len = 0;
 
   do {
     stack[top++] = digits[n % base];
-    len++;
     n /= base;
   } while (n);
+  for (width = width - top; width > 0; width--) {
+    if (cb(padding, arg)) {
+      return -1;
+    }
+    len++;
+  }
   while (top) {
     if (cb(stack[--top], arg)) {
       return -1;
     }
+    len++;
   }
   return len;
 }
@@ -42,7 +48,7 @@ handle_int(int n, int (*cb)(char ch, void *arg), void *arg) {
     len++;
     n = -n;
   }
-  len += handle_uint(n, 10, cb, arg);
+  len += handle_uint(n, 10, 0, 0, cb, arg);
   return len;
 }
 
@@ -82,7 +88,17 @@ handle_format(const char *fmt, va_list ap, int (*cb)(char ch, void *arg), void *
 
   for (; *fmt; fmt++) {
     char c = *fmt;
+    char padding = ' ';
+    size_t width = 0;
     if (isfmt) {
+      if (c == '0') {
+        padding = '0';
+        c = *(++fmt);
+      }
+      while (c >= '0' && c <= '9') {
+        width = width * 10 + c - '0';
+        c = *(++fmt);
+      }
       switch (c) {
         case '%':
           ret = cb('%', arg) == -1 ? -1 : 1;
@@ -91,7 +107,7 @@ handle_format(const char *fmt, va_list ap, int (*cb)(char ch, void *arg), void *
           ret = handle_int(va_arg(ap, int), cb, arg);
           break;
         case 'u':
-          ret = handle_uint(va_arg(ap, unsigned), 10, cb, arg);
+          ret = handle_uint(va_arg(ap, unsigned), 10, padding, width, cb, arg);
           break;
         case 's':
           ret = handle_str(va_arg(ap, const char *), cb, arg);
@@ -100,7 +116,7 @@ handle_format(const char *fmt, va_list ap, int (*cb)(char ch, void *arg), void *
           ret = cb(va_arg(ap, int), arg) == -1 ? -1 : 1;
           break;
         case 'x':
-          ret = handle_uint(va_arg(ap, unsigned int), 16, cb, arg);
+          ret = handle_uint(va_arg(ap, unsigned int), 16, padding, width, cb, arg);
           break;
         case 'p':
           ret = handle_ptr(va_arg(ap, uintptr_t), cb, arg);
