@@ -10,4 +10,4 @@ AM_SRCS := x86/qemu/start32.S \
            x86/qemu/mpe.c
 
 run: build-arg
-	@qemu-system-i386 $(QEMU_FLAGS)
+	@qemu-system-i386 $(QEMU_FLAGS); code=$$?; [ $$code -eq 0 ] || exit `expr $$code / 2`

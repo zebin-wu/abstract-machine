@@ -54,7 +54,11 @@ void halt(int code) {
         putch(ch);
     }
   }
-  outw(0x604, 0x2000); // offer of qemu :)
+  if (code) {
+    outl(0x501, code);  // exit((code << 1) | 1)
+  } else {
+    outw(0x604, 10 | 0x2000);  // shutdown
+  }
   while (1) hlt();
 }
 
