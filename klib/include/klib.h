@@ -52,6 +52,15 @@ int    vsnprintf (char *str, size_t size, const char *format, va_list ap);
     } while (0)
 #endif
 
+#define panic(s) \
+  do { \
+    printf("AM Panic: %s @ " __FILE__ ":" TOSTRING(__LINE__) "  \n", s); \
+    halt(1); \
+  } while (0)
+
+#define panic_on(cond, s) \
+  ({ if (cond) { panic(s); } })
+
 #ifdef __cplusplus
 }
 #endif

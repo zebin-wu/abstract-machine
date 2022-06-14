@@ -15,6 +15,7 @@
 #ifndef __ASSEMBLER__
 
 #include <am.h>
+#include <klib.h>
 #include <klib-macros.h>
 
 struct kernel_stack {
