@@ -259,9 +259,12 @@ static int vprint_handle_cb(char ch, void *arg) {
 }
 
 int vprintf(const char *fmt, va_list ap) {
+  bool i = ienabled();
+  iset(false);
   while (atomic_xchg(&locked, 1));
   int len = handle_format(fmt, ap, vprint_handle_cb, NULL);
   atomic_xchg(&locked, 0);
+  if (i) iset(true);
   return len;
 }
 
