@@ -7,6 +7,11 @@ QEMU_FLAGS += -serial mon:stdio \
               -device isa-debug-exit \
               -drive format=raw,file=$(IMAGE)
 
+ifneq ($(gdbport),)
+CFLAGS += -ggdb3 -O0
+QEMU_FLAGS += -gdb tcp::$(gdbport)
+endif
+
 build-arg: image
 	@( echo -n $(mainargs); ) | dd if=/dev/stdin of=$(IMAGE) bs=512 count=2 seek=1 conv=notrunc status=none
 
