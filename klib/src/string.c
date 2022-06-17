@@ -63,9 +63,10 @@ void *memmove(void *dst, const void *src, size_t n) {
       ((char *)dst)[i] = ((char *)src)[i];
     }
   } else {
-    for (size_t i = n - 1; i >= 0; i--) {
+    for (size_t i = n - 1; i != 0; i--) {
       ((char *)dst)[i] = ((char *)src)[i];
     }
+    ((char *)dst)[0] = ((char *)src)[0];
   }
   return dst;
 }
