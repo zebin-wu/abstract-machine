@@ -27,4 +27,7 @@
 #define static_assert(const_cond) \
   static char CONCAT(_static_assert_, __LINE__) [(const_cond) ? 1 : -1] __attribute__((unused))
 
+#define container_of(ptr, type, member) \
+	((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
+
 #endif
