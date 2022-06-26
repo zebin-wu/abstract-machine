@@ -155,6 +155,14 @@ void map(AddrSpace *as, void *va, void *pa, int prot) {
   ptwalk(as, (uintptr_t)va, PTE_W | PTE_U);
 }
 
+void *va2pa(AddrSpace *as, void *va) {
+  panic_on(!IN_RANGE(va, uvm_area), "invalid address");
+  panic_on((uintptr_t)va != ROUNDDOWN(va, mmu.pgsize), "non-page-boundary address");
+
+  uintptr_t *ptentry = ptwalk(as, (uintptr_t)va, PTE_W | PTE_U);
+  return (void *)ROUNDDOWN(*ptentry, mmu.pgsize);
+}
+
 Context *ucontext(AddrSpace *as, Area kstack, void *entry) {
   Context *ctx = kstack.end - sizeof(Context);
   *ctx = (Context) { 0 };
