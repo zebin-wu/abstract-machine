@@ -9,7 +9,7 @@ QEMU_FLAGS += -serial mon:stdio \
 
 ifneq ($(gdbport),)
 CFLAGS += -ggdb3 -O0
-QEMU_FLAGS += -gdb tcp::$(gdbport)
+QEMU_FLAGS += -S -gdb tcp::$(gdbport)
 endif
 
 build-arg: image
