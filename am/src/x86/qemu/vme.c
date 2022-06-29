@@ -185,3 +185,21 @@ Context *ucontext(AddrSpace *as, Area kstack, void *entry) {
 
   return ctx;
 }
+
+void clone(Context *dst, Context *src) {
+#if __x86_64__
+  uint64_t rsp0 = dst->rsp0;
+#else
+  uint32_t esp0 = dst->esp0;
+#endif
+  void *cr3 = dst->cr3;
+
+  *dst = *src;
+
+#if __x86_64__
+  dst->rsp0 = rsp0;
+#else
+  dst->esp0 = esp0;
+#endif
+  dst->cr3 = cr3;
+}
