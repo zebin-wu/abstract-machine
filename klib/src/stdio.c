@@ -226,7 +226,7 @@ handle_format(const char *fmt, va_list ap, int (*cb)(char ch, void *arg), void *
           case 2: unum = va_arg(ap, long long unsigned); break;
           default: assert(0); break;
           }
-          ret = handle_uint(va_arg(ap, unsigned int), 16, padding, width, cb, arg);
+          ret = handle_uint(unum, 16, padding, width, cb, arg);
           break;
         case 'p':
           ret = handle_ptr(va_arg(ap, uintptr_t), padding, width, cb, arg);
