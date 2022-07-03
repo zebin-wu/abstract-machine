@@ -34,6 +34,7 @@ static const struct vm_area vm_areas[] = {
 #define uvm_area (vm_areas[0].area)
 
 uintptr_t *__am_kpt;
+static bool vme_enabled;
 static void *(*pgalloc)(int size);
 static void (*pgfree)(void *);
 
@@ -111,6 +112,7 @@ bool vme_init(void *(*_pgalloc)(int size), void (*_pgfree)(void *)) {
 
   set_cr3(__am_kpt);
   set_cr0(get_cr0() | CR0_PG);
+  vme_enabled = true;
   return true;
 }
 
@@ -202,4 +204,11 @@ void clone(Context *dst, Context *src) {
   dst->esp0 = esp0;
 #endif
   dst->cr3 = cr3;
+}
+
+void __am_othercpu_initvme() {
+  if (vme_enabled) {
+    set_cr3(__am_kpt);
+    set_cr0(get_cr0() | CR0_PG);
+  }
 }
